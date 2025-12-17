@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dental School Explorer (Acceptance Rates)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f8fafc; font-family: 'Segoe UI', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Acceptance Rate Bar */
+        .rate-bar-bg { background: #e2e8f0; height: 6px; border-radius: 3px; overflow: hidden; }
+        .rate-bar-fill { height: 100%; border-radius: 3px; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen overflow-hidden flex flex-col">
+
+<nav class="bg-indigo-900 text-white p-4 shadow-md flex justify-between items-center shrink-0 z-20">
+    <div class="flex items-center gap-3">
+        <span class="text-2xl">🦷</span>
+        <div>
+            <h1 class="font-bold text-lg leading-tight">DentalPath Pro <span class="text-emerald-400 text-xs ml-2">v3.0</span></h1>
+            <div class="text-[10px] text-indigo-200 uppercase tracking-wider">With Acceptance Rates</div>
+        </div>
+    </div>
+    <button onclick="app.downloadCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold py-2 px-4 rounded flex items-center gap-2 transition">
+        <span>📥</span> Export Data
+    </button>
+</nav>
+
+<div class="flex flex-1 overflow-hidden">
+    
+    <aside class="w-80 bg-white border-r border-slate-200 flex flex-col shrink-0 z-10 shadow-lg">
+        <div class="p-5 overflow-y-auto flex-1 space-y-6">
+            
+            <div class="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">1. Your Stats</div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600">Overall GPA</label>
+                        <input type="number" id="inputGpa" step="0.01" placeholder="3.50" class="w-full mt-1 p-2 bg-white border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-bold text-indigo-900">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600">Science GPA</label>
+                        <input type="number" id="inputSciGpa" step="0.01" placeholder="3.40" class="w-full mt-1 p-2 bg-white border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-bold text-indigo-900">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">DAT Score (AA)</label>
+                    <input type="number" id="inputDat" placeholder="20" class="w-full mt-1 p-2 bg-white border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-bold text-indigo-900">
+                </div>
+            </div>
+
+            <hr class="border-slate-100">
+
+            <div class="space-y-3 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <div class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">2. Budget & Residency</div>
+                
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">My Residence</label>
+                    <select id="inputResidency" class="w-full mt-1 p-2 bg-white border border-slate-300 rounded text-sm outline-none cursor-pointer" onchange="app.filter()">
+                        <option value="None">International / None</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">Max Annual Tuition</label>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-slate-500">$</span>
+                        <input type="number" id="inputMaxTuition" placeholder="e.g. 80000" class="w-full mt-1 p-2 bg-white border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">3. Filters</div>
+                
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">Search Name</label>
+                    <input type="text" id="inputSearch" placeholder="e.g. Michigan..." class="w-full mt-1 p-2 bg-slate-50 border border-slate-200 rounded text-sm outline-none">
+                </div>
+                
+                <label class="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 p-2 rounded hover:bg-slate-50 transition">
+                    <input type="checkbox" id="oosFriendly" class="rounded text-indigo-600 focus:ring-0">
+                    <span class="text-xs font-bold text-slate-700">Show "OOS Friendly" Only</span>
+                </label>
+                <p class="text-[10px] text-slate-400 ml-1">Hides schools with < 3% Out-of-State acceptance.</p>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">4. Prerequisites</div>
+                    <button onclick="app.toggleAllPrereqs()" class="text-[10px] text-indigo-500 font-bold hover:underline">Select All</button>
+                </div>
+                <div id="prereqList" class="space-y-1 max-h-40 overflow-y-auto border border-slate-200 rounded p-2 bg-slate-50">
+                    </div>
+            </div>
+
+        </div>
+
+        <div class="p-4 border-t border-slate-200 bg-slate-50">
+            <button onclick="app.filter()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded shadow-lg shadow-indigo-200 transition mb-3">
+                Update Results
+            </button>
+            <label class="flex items-center justify-center gap-2 cursor-pointer text-xs text-slate-500 hover:text-slate-700">
+                <input type="checkbox" id="strictMode" class="rounded text-indigo-600 focus:ring-0">
+                <span>Hide "Far Reach" Schools</span>
+            </label>
+        </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto bg-slate-100 p-6 relative">
+        <div class="max-w-[1600px] mx-auto">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800" id="resultsCount">Loading...</h2>
+                    <p class="text-sm text-slate-500">Sorted by: <span class="font-bold text-emerald-600">Target</span> → <span class="font-bold text-yellow-600">Reach</span></p>
+                </div>
+                <div class="text-right">
+                     <span class="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold" id="residencyBadge">Residency: None</span>
+                </div>
+            </div>
+
+            <div id="resultsGrid" class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 pb-20">
+                </div>
+            
+            <div class="text-center text-xs text-slate-400 mt-10 mb-5 max-w-4xl mx-auto leading-relaxed border-t border-slate-200 pt-5">
+                <strong>DISCLAIMER:</strong> 
+                Acceptance rates are <strong>ESTIMATES</strong> based on 2023-2024 ADEA & Class Profile data. 
+                "In-State" % refers to the acceptance rate for residents. "Out-State" % refers to non-residents. 
+                Tuition does not include living expenses. Verify all data on official university websites.
+            </div>
+        </div>
+    </main>
+
+</div>
+
+<script>
+const app = {
+    // DATABASE: 67 Schools with Acceptance Rates (accIn = In-State %, accOut = Out-of-State %)
+    // Note: 'accOut' for private schools is often the same as overall, or slightly lower.
+    // For public schools, accOut is often drastically lower.
+    schools: [
+        { name: "UAB School of Dentistry", state: "AL", oGpa: 3.79, sGpa: 3.72, dat: 21, tIn: 38000, tOut: 85000, accIn: 46.2, accOut: 3.8, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Calculus"] },
+        { name: "A.T. Still (ASDOH)", state: "AZ", oGpa: 3.45, sGpa: 3.35, dat: 19, tIn: 96000, tOut: 96000, accIn: 2.2, accOut: 2.2, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Anatomy", "Physiology"] },
+        { name: "Midwestern University (AZ)", state: "AZ", oGpa: 3.50, sGpa: 3.42, dat: 20, tIn: 105000, tOut: 105000, accIn: 20.9, accOut: 5.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Anatomy"] },
+        { name: "Loma Linda University", state: "CA", oGpa: 3.61, sGpa: 3.52, dat: 21, tIn: 88000, tOut: 88000, accIn: 10.0, accOut: 6.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "UCLA School of Dentistry", state: "CA", oGpa: 3.87, sGpa: 3.84, dat: 23, tIn: 48000, tOut: 63000, accIn: 11.8, accOut: 4.1, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio", "Psych"] },
+        { name: "UCSF School of Dentistry", state: "CA", oGpa: 3.71, sGpa: 3.65, dat: 23, tIn: 49000, tOut: 64000, accIn: 8.3, accOut: 3.2, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Psych"] },
+        { name: "University of the Pacific (UOP)", state: "CA", oGpa: 3.60, sGpa: 3.55, dat: 22, tIn: 125000, tOut: 125000, accIn: 11.3, accOut: 6.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "USC (Herman Ostrow)", state: "CA", oGpa: 3.76, sGpa: 3.68, dat: 21, tIn: 115000, tOut: 115000, accIn: 9.9, accOut: 4.3, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Western University", state: "CA", oGpa: 3.35, sGpa: 3.25, dat: 20, tIn: 89000, tOut: 89000, accIn: 4.4, accOut: 2.1, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "California Northstate", state: "CA", oGpa: 3.25, sGpa: 3.15, dat: 19, tIn: 85000, tOut: 85000, accIn: 5.5, accOut: 4.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "University of Colorado", state: "CO", oGpa: 3.65, sGpa: 3.58, dat: 21, tIn: 45000, tOut: 78000, accIn: 30.9, accOut: 2.1, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio"] },
+        { name: "UConn School of Dental Medicine", state: "CT", oGpa: 3.75, sGpa: 3.68, dat: 22, tIn: 40000, tOut: 75000, accIn: 30.9, accOut: 2.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Howard University", state: "DC", oGpa: 3.30, sGpa: 3.15, dat: 19, tIn: 58000, tOut: 58000, accIn: 28.5, accOut: 5.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "University of Florida", state: "FL", oGpa: 3.87, sGpa: 3.80, dat: 23, tIn: 42000, tOut: 68000, accIn: 12.6, accOut: 1.8, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio", "Genetics"] },
+        { name: "Nova Southeastern", state: "FL", oGpa: 3.55, sGpa: 3.45, dat: 21, tIn: 76000, tOut: 78000, accIn: 14.7, accOut: 4.2, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio"] },
+        { name: "LECOM (Bradenton)", state: "FL", oGpa: 3.40, sGpa: 3.30, dat: 19, tIn: 58000, tOut: 58000, accIn: 6.5, accOut: 4.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Augusta University (DCG)", state: "GA", oGpa: 3.73, sGpa: 3.65, dat: 20, tIn: 32000, tOut: 75000, accIn: 31.5, accOut: 0.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "UIC College of Dentistry", state: "IL", oGpa: 3.65, sGpa: 3.55, dat: 21, tIn: 55000, tOut: 98000, accIn: 15.1, accOut: 2.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Midwestern University (IL)", state: "IL", oGpa: 3.40, sGpa: 3.30, dat: 19, tIn: 88000, tOut: 88000, accIn: 13.1, accOut: 5.2, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Anatomy"] },
+        { name: "Southern Illinois (SIU)", state: "IL", oGpa: 3.60, sGpa: 3.50, dat: 20, tIn: 38000, tOut: 91000, accIn: 12.5, accOut: 1.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Indiana University", state: "IN", oGpa: 3.62, sGpa: 3.52, dat: 20, tIn: 45000, tOut: 96000, accIn: 38.4, accOut: 4.1, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Anatomy", "Physiology"] },
+        { name: "University of Iowa", state: "IA", oGpa: 3.77, sGpa: 3.70, dat: 21, tIn: 55000, tOut: 85000, accIn: 54.2, accOut: 4.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "University of Kentucky", state: "KY", oGpa: 3.65, sGpa: 3.55, dat: 20, tIn: 40000, tOut: 80000, accIn: 33.3, accOut: 4.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "University of Louisville", state: "KY", oGpa: 3.58, sGpa: 3.48, dat: 20, tIn: 42000, tOut: 82000, accIn: 23.1, accOut: 4.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "LSU School of Dentistry", state: "LA", oGpa: 3.70, sGpa: 3.60, dat: 21, tIn: 38000, tOut: 70000, accIn: 57.6, accOut: 1.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio"] },
+        { name: "Univ. of New England (UNE)", state: "ME", oGpa: 3.45, sGpa: 3.35, dat: 19, tIn: 82000, tOut: 82000, accIn: 52.6, accOut: 6.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "University of Maryland", state: "MD", oGpa: 3.65, sGpa: 3.55, dat: 21, tIn: 48000, tOut: 90000, accIn: 27.7, accOut: 2.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Harvard School of Dental Med", state: "MA", oGpa: 3.90, sGpa: 3.88, dat: 26, tIn: 95000, tOut: 95000, accIn: 4.5, accOut: 3.7, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Calculus", "English"] },
+        { name: "Tufts University", state: "MA", oGpa: 3.40, sGpa: 3.30, dat: 20, tIn: 98000, tOut: 98000, accIn: 14.2, accOut: 4.8, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Boston University (BU)", state: "MA", oGpa: 3.50, sGpa: 3.40, dat: 21, tIn: 96000, tOut: 96000, accIn: 24.7, accOut: 4.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "University of Michigan", state: "MI", oGpa: 3.78, sGpa: 3.72, dat: 22, tIn: 50000, tOut: 78000, accIn: 20.0, accOut: 3.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio", "Soc", "Psych"] },
+        { name: "University of Detroit Mercy", state: "MI", oGpa: 3.62, sGpa: 3.52, dat: 20, tIn: 88000, tOut: 88000, accIn: 18.7, accOut: 7.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio"] },
+        { name: "University of Minnesota", state: "MN", oGpa: 3.68, sGpa: 3.60, dat: 21, tIn: 52000, tOut: 95000, accIn: 41.6, accOut: 5.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Math", "Psych"] },
+        { name: "Univ. of Mississippi", state: "MS", oGpa: 3.70, sGpa: 3.60, dat: 20, tIn: 32000, tOut: 75000, accIn: 28.0, accOut: 0.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Stats"] },
+        { name: "UMKC", state: "MO", oGpa: 3.75, sGpa: 3.65, dat: 21, tIn: 35000, tOut: 70000, accIn: 41.9, accOut: 3.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "A.T. Still (MOSDOH)", state: "MO", oGpa: 3.50, sGpa: 3.40, dat: 19, tIn: 92000, tOut: 92000, accIn: 15.8, accOut: 3.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Creighton University", state: "NE", oGpa: 3.65, sGpa: 3.55, dat: 20, tIn: 72000, tOut: 72000, accIn: 13.6, accOut: 5.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "UNMC (Nebraska)", state: "NE", oGpa: 3.75, sGpa: 3.65, dat: 20, tIn: 35000, tOut: 75000, accIn: 51.4, accOut: 3.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "UNLV", state: "NV", oGpa: 3.55, sGpa: 3.45, dat: 20, tIn: 48000, tOut: 105000, accIn: 56.4, accOut: 2.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Rutgers School of Dental Med", state: "NJ", oGpa: 3.70, sGpa: 3.70, dat: 22, tIn: 58000, tOut: 92000, accIn: 20.9, accOut: 3.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Columbia University", state: "NY", oGpa: 3.80, sGpa: 3.75, dat: 24, tIn: 96000, tOut: 96000, accIn: 5.3, accOut: 5.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "English"] },
+        { name: "NYU", state: "NY", oGpa: 3.55, sGpa: 3.45, dat: 21, tIn: 102000, tOut: 102000, accIn: 32.7, accOut: 10.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "University at Buffalo", state: "NY", oGpa: 3.70, sGpa: 3.60, dat: 21, tIn: 45000, tOut: 75000, accIn: 14.7, accOut: 3.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Stony Brook", state: "NY", oGpa: 3.80, sGpa: 3.75, dat: 23, tIn: 45000, tOut: 75000, accIn: 8.8, accOut: 3.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Calc"] },
+        { name: "Touro College", state: "NY", oGpa: 3.50, sGpa: 3.40, dat: 21, tIn: 88000, tOut: 88000, accIn: 8.6, accOut: 3.8, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "UNC Chapel Hill", state: "NC", oGpa: 3.70, sGpa: 3.60, dat: 22, tIn: 38000, tOut: 72000, accIn: 15.4, accOut: 3.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "East Carolina (ECU)", state: "NC", oGpa: 3.60, sGpa: 3.50, dat: 20, tIn: 32000, tOut: 32000, accIn: 15.8, accOut: 0.1, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Math"] },
+        { name: "Ohio State (OSU)", state: "OH", oGpa: 3.68, sGpa: 3.58, dat: 21, tIn: 42000, tOut: 95000, accIn: 49.3, accOut: 3.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio", "Anatomy"] },
+        { name: "Case Western", state: "OH", oGpa: 3.60, sGpa: 3.50, dat: 20, tIn: 82000, tOut: 82000, accIn: 13.6, accOut: 3.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "University of Oklahoma", state: "OK", oGpa: 3.70, sGpa: 3.60, dat: 20, tIn: 30000, tOut: 72000, accIn: 40.2, accOut: 2.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "OHSU", state: "OR", oGpa: 3.74, sGpa: 3.65, dat: 21, tIn: 55000, tOut: 85000, accIn: 43.3, accOut: 4.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Anatomy", "Physiology"] },
+        { name: "UPenn", state: "PA", oGpa: 3.85, sGpa: 3.80, dat: 23, tIn: 98000, tOut: 98000, accIn: 13.9, accOut: 6.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio"] },
+        { name: "Temple University", state: "PA", oGpa: 3.55, sGpa: 3.45, dat: 21, tIn: 72000, tOut: 78000, accIn: 25.0, accOut: 4.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "University of Pittsburgh", state: "PA", oGpa: 3.71, sGpa: 3.62, dat: 21, tIn: 62000, tOut: 72000, accIn: 16.5, accOut: 4.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "MUSC", state: "SC", oGpa: 3.72, sGpa: 3.62, dat: 21, tIn: 40000, tOut: 76000, accIn: 38.0, accOut: 2.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "UTHSC (Tennessee)", state: "TN", oGpa: 3.65, sGpa: 3.55, dat: 20, tIn: 35000, tOut: 80000, accIn: 36.4, accOut: 2.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Meharry Medical College", state: "TN", oGpa: 3.25, sGpa: 3.10, dat: 18, tIn: 75000, tOut: 75000, accIn: 11.0, accOut: 2.9, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio"] },
+        { name: "Texas A&M", state: "TX", oGpa: 3.75, sGpa: 3.65, dat: 22, tIn: 28000, tOut: 42000, accIn: 10.4, accOut: 0.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Stats", "English"] },
+        { name: "UT Health San Antonio", state: "TX", oGpa: 3.65, sGpa: 3.55, dat: 21, tIn: 28000, tOut: 42000, accIn: 10.9, accOut: 0.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Stats", "English"] },
+        { name: "UT Health Houston", state: "TX", oGpa: 3.88, sGpa: 3.83, dat: 23, tIn: 28000, tOut: 42000, accIn: 11.1, accOut: 0.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Stats", "English"] },
+        { name: "Texas Tech El Paso", state: "TX", oGpa: 3.50, sGpa: 3.40, dat: 20, tIn: 28000, tOut: 42000, accIn: 12.0, accOut: 0.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Stats", "English"] },
+        { name: "University of Utah", state: "UT", oGpa: 3.72, sGpa: 3.62, dat: 21, tIn: 52000, tOut: 90000, accIn: 18.4, accOut: 3.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Roseman University", state: "UT", oGpa: 3.45, sGpa: 3.35, dat: 19, tIn: 88000, tOut: 88000, accIn: 12.3, accOut: 4.8, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "VCU", state: "VA", oGpa: 3.65, sGpa: 3.55, dat: 20, tIn: 55000, tOut: 90000, accIn: 21.9, accOut: 3.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "University of Washington", state: "WA", oGpa: 3.65, sGpa: 3.55, dat: 21, tIn: 65000, tOut: 110000, accIn: 25.7, accOut: 3.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "Microbio"] },
+        { name: "West Virginia University", state: "WV", oGpa: 3.60, sGpa: 3.50, dat: 20, tIn: 35000, tOut: 75000, accIn: 60.9, accOut: 4.5, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] },
+        { name: "Marquette University", state: "WI", oGpa: 3.57, sGpa: 3.48, dat: 20, tIn: 72000, tOut: 72000, accIn: 32.1, accOut: 3.0, reqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem"] }
+    ],
+
+    allPrereqs: ["Bio", "GenChem", "Orgo", "Physics", "Biochem", "English", "Math", "Calculus", "Stats", "Microbio", "Anatomy", "Physiology", "Psych", "Soc", "Genetics"],
+    filteredResults: [],
+
+    init() {
+        this.cacheDOM();
+        this.renderStates();
+        this.renderPrereqs();
+        this.filter(); 
+    },
+
+    cacheDOM() {
+        this.dom = {
+            inputGpa: document.getElementById('inputGpa'),
+            inputSciGpa: document.getElementById('inputSciGpa'),
+            inputDat: document.getElementById('inputDat'),
+            inputResidency: document.getElementById('inputResidency'),
+            inputSearch: document.getElementById('inputSearch'),
+            inputMaxTuition: document.getElementById('inputMaxTuition'),
+            strictMode: document.getElementById('strictMode'),
+            oosFriendly: document.getElementById('oosFriendly'),
+            prereqList: document.getElementById('prereqList'),
+            resultsGrid: document.getElementById('resultsGrid'),
+            resultsCount: document.getElementById('resultsCount'),
+            residencyBadge: document.getElementById('residencyBadge')
+        };
+    },
+
+    renderStates() {
+        const states = [...new Set(this.schools.map(s => s.state))].sort();
+        states.forEach(st => {
+            const opt = document.createElement('option');
+            opt.value = st;
+            opt.innerText = st;
+            this.dom.inputResidency.appendChild(opt);
+        });
+    },
+
+    renderPrereqs() {
+        this.allPrereqs.forEach(req => {
+            const div = document.createElement('div');
+            div.className = "flex items-center gap-2 mb-1";
+            const isDefault = ["Bio", "GenChem", "Orgo", "Physics", "English"].includes(req);
+            div.innerHTML = `
+                <input type="checkbox" value="${req}" ${isDefault ? 'checked' : ''} class="rounded text-indigo-600 focus:ring-0 cursor-pointer"> 
+                <span class="text-xs text-slate-700">${req}</span>
+            `;
+            this.dom.prereqList.appendChild(div);
+        });
+    },
+
+    toggleAllPrereqs() {
+        const boxes = this.dom.prereqList.querySelectorAll('input[type="checkbox"]');
+        const allChecked = Array.from(boxes).every(b => b.checked);
+        boxes.forEach(b => b.checked = !allChecked);
+    },
+
+    formatMoney(amount) {
+        return '$' + amount.toLocaleString();
+    },
+
+    getMatchStatus(school, uGpa, uSgpa, uDat) {
+        if(uGpa === 0) return { priority: 4, text: "School Info", color: "bg-slate-100 text-slate-600 border-slate-200" };
+
+        let score = 0;
+        if(uGpa >= school.oGpa - 0.1) score++;
+        if(uSgpa >= school.sGpa - 0.1) score++;
+        if(uDat >= school.dat - 1) score++;
+
+        if(score === 3) return { priority: 1, text: "Target / Safety", color: "bg-emerald-100 text-emerald-800 border-emerald-200" };
+        if(score === 2) return { priority: 2, text: "Reach", color: "bg-yellow-100 text-yellow-800 border-yellow-200" };
+        return { priority: 3, text: "Far Reach", color: "bg-red-100 text-red-800 border-red-200" };
+    },
+
+    filter() {
+        const uGpa = parseFloat(this.dom.inputGpa.value) || 0;
+        const uSgpa = parseFloat(this.dom.inputSciGpa.value) || 0;
+        const uDat = parseFloat(this.dom.inputDat.value) || 0;
+        const uResidency = this.dom.inputResidency.value;
+        const uSearch = this.dom.inputSearch.value.toLowerCase();
+        const uMaxTuition = parseFloat(this.dom.inputMaxTuition.value) || 999999;
+        const strict = this.dom.strictMode.checked;
+        const showOOSFriendly = this.dom.oosFriendly.checked;
+        
+        // Update Badge
+        this.dom.residencyBadge.innerText = `Residency: ${uResidency === "None" ? "Non-Resident/Intl" : uResidency}`;
+        
+        const checkboxes = this.dom.prereqList.querySelectorAll('input:checked');
+        const uPrereqs = Array.from(checkboxes).map(cb => cb.value);
+
+        // 1. FILTER
+        this.filteredResults = this.schools.filter(s => {
+            if(uSearch && !s.name.toLowerCase().includes(uSearch)) return false;
+
+            const missing = s.reqs.filter(r => !uPrereqs.includes(r));
+            if(strict && missing.length > 0) return false;
+
+            if(uGpa > 0 || uSgpa > 0 || uDat > 0) {
+                const status = this.getMatchStatus(s, uGpa, uSgpa, uDat);
+                if(strict && status.priority === 3) return false; 
+                if(uGpa > 0 && s.oGpa > uGpa + 0.6) return false; 
+            }
+
+            const myCost = (uResidency === s.state) ? s.tIn : s.tOut;
+            if(myCost > uMaxTuition) return false;
+
+            // OOS Friendly Filter
+            if(showOOSFriendly && uResidency !== s.state && s.accOut < 3.0) return false;
+
+            return true;
+        });
+
+        // 2. SORT (Smart Sorting Engine)
+        if(uGpa > 0 || uDat > 0) {
+            this.filteredResults.sort((a, b) => {
+                const statA = this.getMatchStatus(a, uGpa, uSgpa, uDat);
+                const statB = this.getMatchStatus(b, uGpa, uSgpa, uDat);
+                if(statA.priority !== statB.priority) return statA.priority - statB.priority;
+                
+                // Secondary sort: Cost
+                const costA = (uResidency === a.state) ? a.tIn : a.tOut;
+                const costB = (uResidency === b.state) ? b.tIn : b.tOut;
+                return costA - costB;
+            });
+        } else {
+            this.filteredResults.sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        this.renderResults(this.filteredResults, uPrereqs, uGpa, uSgpa, uDat, uResidency);
+    },
+
+    renderResults(list, uPrereqs, uGpa, uSgpa, uDat, uResidency) {
+        this.dom.resultsGrid.innerHTML = "";
+        this.dom.resultsCount.innerText = `Found ${list.length} Schools`;
+
+        if(list.length === 0) {
+            this.dom.resultsGrid.innerHTML = `<div class="col-span-full text-center text-slate-400 py-20 border-2 border-dashed border-slate-200 rounded-xl">No schools match. Try unchecking 'OOS Friendly' or relaxing filters.</div>`;
+            return;
+        }
+
+        list.forEach(s => {
+            const status = this.getMatchStatus(s, uGpa, uSgpa, uDat);
+            const isResident = (uResidency === s.state);
+            
+            // Reqs Tags
+            const reqTags = s.reqs.map(r => {
+                const missing = !uPrereqs.includes(r);
+                return `<span class="px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wide ${missing ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-slate-100 text-slate-500'}">${r}</span>`;
+            }).join("");
+
+            const html = `
+                <div class="school-card fade-in bg-white p-5 rounded-xl border border-slate-200 shadow-sm card-hover relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-1.5 h-full ${status.color.replace('text-', 'bg-').split(' ')[0]}"></div>
+                    
+                    <div class="flex justify-between items-start mb-3 pl-3">
+                        <div>
+                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold mb-1 border ${status.color}">${status.text}</span>
+                            <h3 class="font-bold text-lg text-slate-800 leading-tight group-hover:text-indigo-700 transition">${s.name}</h3>
+                            <span class="text-xs text-slate-400 font-semibold flex items-center gap-1">📍 ${s.state}</span>
+                        </div>
+                        <div class="text-right bg-indigo-50 p-2 rounded-lg min-w-[60px]">
+                            <div class="text-[10px] text-indigo-400 uppercase font-bold">DAT</div>
+                            <div class="text-xl font-bold text-indigo-700 leading-none">${s.dat}</div>
+                        </div>
+                    </div>
+
+                    <div class="pl-3 mb-4">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Acceptance Rate (Est.)</div>
+                        <div class="flex gap-3 text-xs mb-1">
+                            <div class="flex-1">
+                                <div class="flex justify-between mb-1">
+                                    <span class="${isResident ? 'font-bold text-emerald-700' : 'text-slate-600'}">In-State</span>
+                                    <span class="font-bold">${s.accIn}%</span>
+                                </div>
+                                <div class="rate-bar-bg"><div class="rate-bar-fill bg-emerald-500" style="width:${Math.min(s.accIn, 100)}%"></div></div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex justify-between mb-1">
+                                    <span class="${!isResident ? 'font-bold text-blue-700' : 'text-slate-600'}">Out-State</span>
+                                    <span class="font-bold">${s.accOut}%</span>
+                                </div>
+                                <div class="rate-bar-bg"><div class="rate-bar-fill bg-blue-500" style="width:${Math.min(s.accOut, 100)}%"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pl-3 mb-4">
+                        <div class="flex gap-2 text-sm bg-slate-50 p-2 rounded border border-slate-100">
+                             <div class="flex-1 ${isResident ? 'font-bold text-emerald-700' : 'text-slate-400'}">
+                                <div class="text-[10px] uppercase">In-State Cost</div>
+                                <div>${this.formatMoney(s.tIn)}</div>
+                             </div>
+                             <div class="w-px bg-slate-200"></div>
+                             <div class="flex-1 ${!isResident ? 'font-bold text-blue-700' : 'text-slate-400'}">
+                                <div class="text-[10px] uppercase">Out-State Cost</div>
+                                <div>${this.formatMoney(s.tOut)}</div>
+                             </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4 pl-3">
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold">Overall GPA</div>
+                            <div class="text-lg font-bold text-slate-700">${s.oGpa.toFixed(2)}</div>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100">
+                            <div class="text-[10px] text-slate-400 uppercase font-bold">Science GPA</div>
+                            <div class="text-lg font-bold text-slate-700">${s.sGpa.toFixed(2)}</div>
+                        </div>
+                    </div>
+
+                    <div class="pl-3">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Prerequisites</div>
+                        <div class="flex flex-wrap gap-1">
+                            ${reqTags}
+                        </div>
+                    </div>
+                </div>
+            `;
+            this.dom.resultsGrid.insertAdjacentHTML('beforeend', html);
+        });
+    },
+
+    downloadCSV() {
+        if(this.filteredResults.length === 0) { alert("No schools to download!"); return; }
+        
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "School,State,In-State Acceptance %,Out-of-State Acceptance %,Tuition (In),Tuition (Out),Overall GPA,Science GPA,DAT Avg\n";
+
+        this.filteredResults.forEach(s => {
+            const row = `"${s.name}","${s.state}",${s.accIn},${s.accOut},${s.tIn},${s.tOut},${s.oGpa},${s.sGpa},${s.dat}`;
+            csvContent += row + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "dental_schools_acceptance_data.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+};
+
+app.init();
+</script>
+
+</body>
+</html>
